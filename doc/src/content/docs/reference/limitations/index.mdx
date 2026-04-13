@@ -1,0 +1,103 @@
+---
+title: Known Limitations
+description: Inherent limitations of the static analysis approach used by design-token-lint.
+sidebar_position: 4
+category: reference
+---
+
+`design-token-lint` uses regex-based static analysis to extract class names from source files. This approach is fast and requires no build step, but it cannot evaluate code at runtime. As a result, some dynamic patterns are not extracted and will not be linted.
+
+These are not bugs — they are inherent to static analysis.
+
+## Supported: Multiline className
+
+Multiline `className` values are supported:
+
+```tsx
+<div
+  className="
+    p-4
+    bg-gray-500
+  "
+>
+```
+
+Classes spread across multiple lines are extracted correctly.
+
+## Limitation: Conditional Expressions
+
+Ternary expressions inside `className` are not extracted:
+
+```tsx
+// Not linted — classes inside ternaries are not extracted
+<div className={isActive ? "p-4" : "m-8"}>
+```
+
+The extractor looks for string literals directly assigned to `className` or `class`. The ternary syntax is not matched.
+
+**Workaround**: Use an ignore comment if the class would otherwise be flagged:
+
+```tsx
+{/* design-token-lint-ignore */}
+<div className={isActive ? "p-4" : "m-8"}>
+```
+
+## Limitation: Template Interpolation
+
+Template literals with dynamic expressions are not extracted:
+
+```tsx
+// Not linted — dynamic template literals cannot be statically analyzed
+<div className={`p-${size} bg-${color}-500`}>
+```
+
+Static portions are not reliably separable from dynamic ones in all cases.
+
+**Workaround**: Use ignore comments or restructure to use static class names with conditional logic.
+
+## Limitation: Escaped Quotes
+
+Class attributes containing escaped quotes may extract incorrectly:
+
+```tsx
+// May extract incorrectly
+<div className="p-4 \"m-8\"">
+```
+
+The regex parser does not handle escaped quote sequences inside string literals.
+
+**Workaround**: Avoid escaped quotes inside class attributes. Use JSX expression syntax instead:
+
+```tsx
+<div className={'p-4 m-8'}>
+```
+
+## Limitation: Object Keys in class:list
+
+Astro's `class:list` directive supports object syntax where keys are class names. These are not extracted:
+
+```astro
+// Not linted — object key syntax is not extracted
+<div class:list={[{ "p-4": true, "m-8": isActive }]}>
+```
+
+Only array string literals in `class:list` are supported:
+
+```astro
+// This is supported
+<div class:list={["p-4", "m-8"]}>
+```
+
+**Workaround**: Use ignore comments or restructure to use the array string form.
+
+## Summary
+
+| Pattern | Supported |
+| --- | --- |
+| Multiline `className` | Yes |
+| Static string literals | Yes |
+| Template literals (static only) | Yes |
+| Ternary expressions | No |
+| Template literals with interpolation | No |
+| Escaped quotes in class strings | No |
+| Object keys in `class:list` | No |

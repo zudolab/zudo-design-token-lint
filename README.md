@@ -157,6 +157,17 @@ The extractor handles:
 - `class:list={["...", '...']}` (Astro)
 - `cn(...)`, `clsx(...)`, `classNames(...)`, `twMerge(...)` utility calls
 
+## Known Limitations
+
+This linter uses static analysis (regex-based extraction), which has inherent limitations:
+
+- **Conditional expressions**: Ternaries like `isActive ? "p-4" : "m-8"` are not extracted
+- **Template interpolation**: Dynamic values like `` className={`p-${size}`} `` cannot be statically analyzed
+- **Escaped quotes**: `className="p-4 \"m-8\""` may extract incorrectly
+- **Object keys in class:list**: `class:list={[{"p-4": true}]}` object syntax is not extracted
+
+These are inherent to the static analysis approach and are not bugs. Use `/* design-token-lint-ignore */` to suppress false positives in these cases.
+
 ## License
 
 MIT
