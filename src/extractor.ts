@@ -88,7 +88,10 @@ export function extractClasses(content: string, options?: ExtractorOptions): Ext
     // className={'...'} or class={'...'}
     singleQuoteBrace = new RegExp(`(?<![\\w-])(?:${attrAlt})\\s*=\\s*\\{\\s*'([^']+)'\\s*\\}`, 'g');
     // className={`...`} template literal (simple, no expressions)
-    templateLiteral = new RegExp(`(?<![\\w-])(?:${attrAlt})\\s*=\\s*\\{\\s*\`([^\`]+)\`\\s*\\}`, 'g');
+    templateLiteral = new RegExp(
+      `(?<![\\w-])(?:${attrAlt})\\s*=\\s*\\{\\s*\`([^\`]+)\`\\s*\\}`,
+      'g',
+    );
     // Multiline: className="... without closing quote on same line
     multilineDoubleStart = new RegExp(`(?<![\\w-])(?:${attrAlt})\\s*=\\s*"([^"]*$)`);
     multilineSingleStart = new RegExp(`(?<![\\w-])(?:${attrAlt})\\s*=\\s*'([^']*$)`);
