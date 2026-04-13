@@ -67,11 +67,11 @@ export const settings = {
         title: "More",
         items: [
           { label: "GitHub", href: "https://github.com/Takazudo/zudo-design-token-lint" },
-          { label: "npm", href: "https://www.npmjs.com/package/@zudolab/design-token-lint" },
+          { label: "npm", href: "https://www.npmjs.com/package/@takazudo/zudo-design-token-lint" },
         ],
       },
     ],
-    copyright: `Copyright © ${new Date().getFullYear()} zudolab. Built with zudo-doc.`,
+    copyright: `Copyright © ${new Date().getFullYear()} takazudo. Built with zudo-doc.`,
   } satisfies FooterConfig as FooterConfig | false,
   headerNav: [
     { label: "Overview", path: "/docs/overview", categoryMatch: "overview" },
