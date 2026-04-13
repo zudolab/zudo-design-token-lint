@@ -65,8 +65,21 @@ Create a `.design-token-lint.json` (or `design-token-lint.config.json`) in your 
 | `ignore`           | `string[]` | File glob patterns to skip entirely                                                                 |
 | `patterns`         | `string[]` | File glob patterns to scan (overrides CLI defaults when no args given)                              |
 | `suggestionSuffix` | `string`   | Custom suffix for violation messages (replaces the default suggestion text)                         |
+| `semanticPrefixes` | `string[]` | Value prefixes that bypass spacing rules (default: `["hgap-", "vgap-"]`)                            |
 
 All fields fall back to built-in defaults if omitted.
+
+#### `semanticPrefixes`
+
+Override the default semantic token prefixes to match your project's naming convention:
+
+```json
+{
+  "semanticPrefixes": ["hsp-", "vsp-"]
+}
+```
+
+Classes like `p-hsp-sm` or `gap-vsp-md` will be allowed instead of the default `hgap-`/`vgap-` prefixes. Set to `[]` to disable the prefix allowlist entirely.
 
 #### `suggestionSuffix`
 
@@ -156,6 +169,16 @@ The extractor handles:
 - ``className={`...`}`` (template literals, simple cases)
 - `class:list={["...", '...']}` (Astro)
 - `cn(...)`, `clsx(...)`, `classNames(...)`, `twMerge(...)` utility calls
+
+## Known Limitations
+
+This linter uses static analysis (regex-based extraction), which has inherent limitations:
+
+- **Conditional expressions**: Ternaries like `isActive ? "p-4" : "m-8"` are not extracted — classes inside ternaries are silently skipped
+- **Template interpolation**: ``className={`p-${size}`}`` extracts the literal string `p-${size}`, which matches no rules, so dynamic classes are never linted
+- **Escaped quotes**: `className="p-4 \"m-8\""` may extract incorrectly due to unhandled escape sequences
+
+These are inherent to the static analysis approach and are not bugs.
 
 ## License
 

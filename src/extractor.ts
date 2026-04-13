@@ -58,17 +58,25 @@ export function extractClasses(content: string): ExtractedClass[] {
 
   // Patterns to match class attributes
   // className="..." or class="..."
-  const doubleQuoteAttr = /(?:className|class)\s*=\s*"([^"]+)"/g;
+  const doubleQuoteAttr = /(?<![\w-])(?:className|class)\s*=\s*"([^"]+)"/g;
   // class='...' (single-quote HTML attribute, common in Astro/HTML)
-  const singleQuoteAttr = /(?:className|class)\s*=\s*'([^']+)'/g;
+  const singleQuoteAttr = /(?<![\w-])(?:className|class)\s*=\s*'([^']+)'/g;
   // className={'...'} or class={'...'}
-  const singleQuoteBrace = /(?:className|class)\s*=\s*\{\s*'([^']+)'\s*\}/g;
+  const singleQuoteBrace = /(?<![\w-])(?:className|class)\s*=\s*\{\s*'([^']+)'\s*\}/g;
   // className={`...`} template literal (simple, no expressions)
-  const templateLiteral = /(?:className|class)\s*=\s*\{\s*`([^`]+)`\s*\}/g;
+  const templateLiteral = /(?<![\w-])(?:className|class)\s*=\s*\{\s*`([^`]+)`\s*\}/g;
   // class:list={["...", '...']} — Astro
   const classListPattern = /class:list\s*=\s*\{\s*\[([^\]]+)\]\s*\}/g;
   // clsx/cn/classNames function calls: cn("...", '...'), clsx("...", '...')
   const utilFnPattern = /(?:cn|clsx|classNames|twMerge)\s*\(\s*([^)]+)\)/g;
+  // Multiline: className="... or class="... without closing quote on same line.
+  // These are mutually exclusive with the single-line patterns above: single-line
+  // patterns require a closing quote ([^"]+"), so they only match closed attributes;
+  // these require no closing quote before end-of-line ([^"]*$), so they only match
+  // unclosed openings. Known limitation: attributes on the same closing line after
+  // the closing quote are not re-processed (extremely rare in practice).
+  const multilineDoubleStart = /(?<![\w-])(?:className|class)\s*=\s*"([^"]*$)/;
+  const multilineSingleStart = /(?<![\w-])(?:className|class)\s*=\s*'([^']*$)/;
 
   for (let i = 0; i < lines.length; i++) {
     if (ignoredLines.has(i)) continue;
@@ -112,13 +120,45 @@ export function extractClasses(content: string): ExtractedClass[] {
         addClasses(results, strMatch[1], lineNum);
       }
     }
+
+    // Detect unclosed multiline class/className attribute and accumulate across lines
+    const multilineDoubleMatch = multilineDoubleStart.exec(line);
+    const multilineSingleMatch = multilineDoubleMatch ? null : multilineSingleStart.exec(line);
+    const multilineMatch = multilineDoubleMatch ?? multilineSingleMatch;
+
+    if (multilineMatch) {
+      const quoteChar = multilineDoubleMatch ? '"' : "'";
+      let accumulated = multilineMatch[1]; // content after opening quote on opening line
+      const openLineNum = lineNum;
+
+      // Accumulate subsequent lines until the closing quote is found.
+      // Safety limit: stop after 50 lines to avoid consuming entire file on malformed input.
+      const maxLines = 50;
+      let linesConsumed = 0;
+      while (i + 1 < lines.length && linesConsumed < maxLines) {
+        i++;
+        linesConsumed++;
+        const nextLine = lines[i];
+        const closeIdx = nextLine.indexOf(quoteChar);
+        if (closeIdx !== -1) {
+          // Take everything before the closing quote
+          accumulated += ' ' + nextLine.substring(0, closeIdx);
+          break;
+        } else {
+          accumulated += ' ' + nextLine;
+        }
+      }
+
+      addClasses(results, accumulated, openLineNum);
+    }
   }
 
   return results;
 }
 
 function addClasses(results: ExtractedClass[], classString: string, line: number): void {
-  const classes = classString
+  const cleaned = classString.replace(/\/\*[\s\S]*?\*\//g, ' ');
+  const classes = cleaned
     .split(/\s+/)
     .map((c) => c.trim())
     .filter((c) => c.length > 0);
